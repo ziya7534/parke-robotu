@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profesyonel Parke Hesaplama Robotu</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+h1 { text-align: center; color: #333; }
+.container { max-width: 950px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+label { display: block; margin-top: 15px; font-weight: bold; }
+input, select { width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; }
+button { margin-top: 20px; padding: 10px 20px; background: #007bff; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+button:hover { background: #0056b3; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+th { background: #007bff; color: #fff; }
+.room-input { display: flex; gap: 10px; margin-top: 10px; }
+.room-input input { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="container">
+<h1>Profesyonel Parke Hesaplama Robotu</h1>
+
+<label for="method">Hesaplama Yöntemi Seçin</label>
+<select id="method" onchange="updateInputs()">
+<option value="area">Alandan</option>
+<option value="flat">Daire Alanından</option>
+<option value="detailed">Detaylı Hesaplama</option>
+</select>
+
+<div id="inputs"></div>
+
+<button onclick="calculate()">Hesapla</button>
+
+<table id="resultTable">
+<tr><th>Metraj / Maliyet</th><th>Değer</th></tr>
+<tr><td>Parke Miktarı (Zaiyat Dahil)</td><td id="parkQty">0</td></tr>
+<tr><td>Süpürgelik Miktarı (Zaiyat Dahil)</td><td id="skQty">0</td></tr>
+<tr><td>Parke Maliyeti</td><td id="parkCost">0</td></tr>
+<tr><td>Şilte Maliyeti</td><td id="shilteCost">0</td></tr>
+<tr><td>Süpürgelik Maliyeti</td><td id="skCost">0</td></tr>
+<tr><td>Akıllı Şap Maliyeti</td><td id="shapCost">0</td></tr>
+<tr><td>Yapıştırıcı Maliyeti</td><td id="adhesiveCost">0</td></tr>
+<tr><td>İşçilik Maliyeti</td><td id="workCost">0</td></tr>
+<tr><td>Toplam Maliyet</td><td id="totalCost">0</td></tr>
+</table>
+</div>
+
+<script>
+function updateInputs() {
+    const method = document.getElementById('method').value;
+    const inputs = document.getElementById('inputs');
+    inputs.innerHTML = '';
+
+    let commonInputs = `
+        <label for="parkPrice">Parke Birim Fiyat (₺/m²)</label>
+        <input type="number" id="parkPrice" value="100" step="0.01">
+        <label for="shiltePrice">Şilte Birim Fiyat (₺/m²)</label>
+        <input type="number" id="shiltePrice" value="20" step="0.01">
+        <label for="skPrice">Süpürgelik Birim Fiyat (₺/mt)</label>
+        <input type="number" id="skPrice" value="50" step="0.01">
+        <label for="shapPrice">Akıllı Şap Maliyeti (₺)</label>
+        <input type="number" id="shapPrice" value="200" step="0.01">
+        <label for="adhesivePrice">Yapıştırıcı Maliyeti (₺)</label>
+        <input type="number" id="adhesivePrice" value="150" step="0.01">
+        <label for="workPrice">İşçilik Maliyeti (₺)</label>
+        <input type="number" id="workPrice" value="300" step="0.01">
+        <label for="parkType">Parke Türü</label>
+        <select id="parkType">
+            <option value="laminat">Laminat</option>
+            <option value="lamine">Lamine</option>
+            <option value="masif">Masif</option>
+            <option value="pvc">PVC</option>
+        </select>
+        <label for="lamClass">Laminat Parke Sınıfı</label>
+        <select id="lamClass">
+            <option value="ac1">AC1</option>
+            <option value="ac3">AC3</option>
+            <option value="ac4">AC4</option>
+            <option value="ac5">AC5</option>
+        </select>
+        <label for="capType">Kaplama Türü</label>
+        <select id="capType">
+            <option value="mese">Meşe</option>
+            <option value="kayin">Kayın</option>
+        </select>
+        <label for="shilteThick">Parke Altı Şilte Kalınlığı</label>
+        <select id="shilteThick">
+            <option value="2">2mm</option>
+            <option value="3">3mm</option>
+            <option value="4">4mm</option>
+            <option value="5">5mm</option>
+        </select>
+        <label for="skType">Süpürgelik Türü</label>
+        <select id="skType">
+            <option value="folyo">Folyo/PVC</option>
+            <option value="masif">Masif</option>
+            <option value="lake">Lake</option>
+            <option value="alum">Alüminyum</option>
+        </select>
+        <label for="skHeight">Süpürgelik Yüksekliği</label>
+        <select id="skHeight">
+            <option value="4">4cm</option>
+            <option value="6">6cm</option>
+            <option value="8">8cm</option>
+            <option value="10">10cm</option>
+            <option value="12">12cm</option>
+            <option value="14">14cm</option>
+            <option value="16">16cm</option>
+        </select>
+        <label for="smartShap">Akıllı Şap (self leveling)</label>
+        <select id="smartShap">
+            <option value="yes">Evet</option>
+            <option value="no">Hayır</option>
+        </select>
+    `;
+
+    if(method==='area') {
+        inputs.innerHTML = `
+            <label for="parkArea">Parke Kaplanacak Alan (m²)</label>
+            <input type="number" id="parkArea" value="0" step="0.01">
+            <label for="skLength">Toplam Süpürgelik Boyu (mt)</label>
+            <input type="number" id="skLength" value="0" step="0.01">
+        ` + commonInputs;
+    } else if(method==='flat') {
+        inputs.innerHTML = `
+            <label for="flatArea">Daire Alanı (m²)</label>
+            <input type="number" id="flatArea" value="50" step="0.01">
+        ` + commonInputs;
+    } else if(method==='detailed') {
+        inputs.innerHTML = `
+            <label>Oda Ölçüleri (m)</label>
+            <div id="roomInputs">
+                <div class="room-input">
+                    <input type="number" placeholder="Uzunluk (A)" class="roomLength">
+                    <input type="number" placeholder="Genişlik (B)" class="roomWidth">
+                </div>
+            </div>
+            <button type="button" onclick="addRoom()">+ Oda Ekle</button>
+        ` + commonInputs;
+    }
+}
+
+function addRoom() {
+    const roomInputs = document.getElementById('roomInputs');
+    const div = document.createElement('div');
+    div.className = 'room-input';
+    div.innerHTML = `<input type="number" placeholder="Uzunluk (A)" class="roomLength">
+                     <input type="number" placeholder="Genişlik (B)" class="roomWidth">`;
+    roomInputs.appendChild(div);
+}
+
+function calculate() {
+    const method = document.getElementById('method').value;
+    let parkArea = 0, skLength = 0;
+
+    const parkPrice = parseFloat(document.getElementById('parkPrice').value) || 0;
+    const shiltePrice = parseFloat(document.getElementById('shiltePrice').value) || 0;
+    const skPrice = parseFloat(document.getElementById('skPrice').value) || 0;
+    const shapPrice = parseFloat(document.getElementById('shapPrice').value) || 0;
+    const adhesivePrice = parseFloat(document.getElementById('adhesivePrice').value) || 0;
+    const workPrice = parseFloat(document.getElementById('workPrice').value) || 0;
+
+    if(method==='area') {
+        parkArea = parseFloat(document.getElementById('parkArea').value) || 0;
+        skLength = parseFloat(document.getElementById('skLength').value) || 0;
+    } else if(method==='flat') {
+        const flatArea = parseFloat(document.getElementById('flatArea').value) || 0;
+        parkArea = flatArea;
+        skLength = Math.sqrt(flatArea)*4;
+    } else if(method==='detailed') {
+        const lengths = document.querySelectorAll('.roomLength');
+        const widths = document.querySelectorAll('.roomWidth');
+        parkArea = 0;
+        skLength = 0;
+        for(let i=0;i<lengths.length;i++){
+            const l=parseFloat(lengths[i].value)||0;
+            const w=parseFloat(widths[i].value)||0;
+            parkArea += l*w;
+            skLength += 2*(l+w);
+        }
+    }
+
+    // Zaiyat %5
+    parkArea *= 1.05;
+    skLength *= 1.05;
+
+    const parkCost = parkArea*parkPrice;
+    const shilteCost = parkArea*shiltePrice;
+    const skCost = skLength*skPrice;
+    const shapCost = document.getElementById('smartShap').value==='yes'?shapPrice:0;
+    const totalCost = parkCost + shilteCost + skCost + shapCost + adhesivePrice + workPrice;
+
+    document.getElementById('parkQty').innerText = parkArea.toFixed(2)+" m²";
+    document.getElementById('skQty').innerText = skLength.toFixed(2)+" mt";
+    document.getElementById('parkCost').innerText = parkCost.toFixed(2)+" ₺";
+    document.getElementById('shilteCost').innerText = shilteCost.toFixed(2)+" ₺";
+    document.getElementById('skCost').innerText = skCost.toFixed(2)+" ₺";
+    document.getElementById('shapCost').innerText = shapCost.toFixed(2)+" ₺";
+    document.getElementById('adhesiveCost').innerText = adhesivePrice.toFixed(2)+" ₺";
+    document.getElementById('workCost').innerText = workPrice.toFixed(2)+" ₺";
+    document.getElementById('totalCost').innerText = totalCost.toFixed(2)+" ₺";
+}
+
+// Başlangıçta inputları oluştur
+updateInputs();
+</script>
+
+</body>
+</html>
